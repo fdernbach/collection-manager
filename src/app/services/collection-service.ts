@@ -65,8 +65,13 @@ export class CollectionService {
     stamp.image = 'img/timbre1.png';
     stamp.price = 555;
 
-    // "linx" keeps the CollectionItem model's default property values
+    // Build the "linx" sample item
     const linx = new CollectionItem();
+    linx.name = 'Linx';
+    linx.description = 'A legendary sword of unmatched sharpness and history.';
+    linx.rarity = Rarities.Legendary;
+    linx.image = 'img/linx2.png';
+    linx.price = 199;
 
     // Create the collection that will hold the sample items
     const defaultCollection = new Collection();

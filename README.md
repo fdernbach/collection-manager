@@ -349,5 +349,49 @@ Open `http://localhost:4200/` — the app reloads automatically as you edit sour
 
 ```bash
 ng build   # production build, output in dist/
-ng test    # unit tests (Vitest)
+ng test    # unit / integration tests (Vitest)
+npm run e2e  # end-to-end tests (Playwright) — starts its own dev server automatically
 ```
+
+## Testing — two different levels
+
+This project has two separate test suites, at two different levels. Both matter, and they
+catch different kinds of bugs.
+
+### `ng test` — unit & integration tests (`src/app/**/*.spec.ts`)
+
+These run inside Angular's `TestBed`, in Node (via `jsdom`, no real browser) — fast, and no
+need to have the app running first.
+
+- A **unit test** exercises one piece in isolation (e.g.
+  `src/app/services/collection-service.spec.ts` just checks the service gets created).
+- An **integration test** renders a real component together with its *real* dependencies —
+  child components, the real `CollectionService` (backed by a real, cleared `localStorage`),
+  the real `Router` — to check that they actually work *together*, not just individually. See
+  `src/app/pages/collection-detail/collection-detail.spec.ts` (renders the grid + search bar
+  together, types into the real search input, checks the real filtered output) and
+  `src/app/pages/collection-item-detail/collection-item-detail.spec.ts` (uses
+  `RouterTestingHarness` to drive the real route config from `app.routes.ts`, so the component
+  receives its `:id` input exactly the way it does in the running app).
+
+These tests actually caught a real bug while being written: `CollectionService.generateDummyData()`
+used to rely on `CollectionItem`'s default field values for its third sample item, with a
+comment claiming that's what gives it its "Linx" identity — but once those defaults were
+changed elsewhere (to serve as a blank starting point for the "create new item" form), that
+comment silently went stale, and the seeded item quietly became blank. The integration test
+asserting on the three seeded item names caught it immediately.
+
+### `npm run e2e` — end-to-end tests (`e2e/*.spec.ts`)
+
+These use [Playwright](https://playwright.dev) to drive a **real, running instance of the app
+in a real browser** — exactly as a user would click through it. `playwright.config.ts` starts
+`ng serve` automatically if it isn't already running.
+
+`e2e/collection-manager.spec.ts` walks through the actual user flows: seeing the seeded items,
+searching, creating a new item (including uploading a file for the image field), cancelling an
+edit, and both outcomes of the delete-confirmation popup (Yes / No).
+
+**Why both?** The integration tests are fast and precise about *what broke* (which component,
+which method) but never touch a real browser. The e2e tests are slower, but are the only ones
+that prove the whole thing — HTML, CSS, routing, the Material components, real click/type
+events — actually works end to end, the same way a real user would experience it.
