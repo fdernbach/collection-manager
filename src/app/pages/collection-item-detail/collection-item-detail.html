@@ -1,5 +1,5 @@
 <app-collection-item-card [item]="collectionItem()"/>
-<form [formGroup]="itemFormGroup" (submit)="submit($event)">
+<form [formGroup]="itemFormGroup" (submit)="save($event)">
     <div class="form-field">
         <label for="name">Name : </label>
         <input id="name" name="name" formControlName="name"/>

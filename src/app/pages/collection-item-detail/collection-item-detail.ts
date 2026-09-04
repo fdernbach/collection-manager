@@ -75,7 +75,7 @@ export class CollectionItemDetail implements OnDestroy {
     }
   }
   
-  submit(event: Event) {
+  save(event: Event) {
     event.preventDefault();
     if (this.itemFormGroup.invalid) {
       return;
