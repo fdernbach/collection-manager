@@ -274,6 +274,44 @@ html {
 }
 ```
 
+## Funky Angular gotchas encountered building this
+
+Real dev-time surprises worth remembering, so they don't have to be rediscovered.
+
+### `withComponentInputBinding()` silently nukes unrelated component inputs
+
+**Symptom:** `CollectionDetail` rendered its header, search bar and "Add Item" button just
+fine — but the item grid was always empty, with a console error:
+`TypeError: Cannot read properties of undefined (reading 'toLowerCase')` inside the
+`collectionItems` computed, on `this.searchText().toLowerCase()`.
+
+**Why:** `searchText = model('')` is meant purely as local, two-way-bound state shared with
+`<app-search-bar>` — it was never supposed to be fed by the router. But `model()` also
+registers a real `@Input()`/`@Output()` pair on the *component itself*, and this component is
+routed with `withComponentInputBinding()` enabled (needed elsewhere, so `CollectionItemDetail`
+can receive its `:id` route param as an input — see the Routes section above).
+
+The router feature's default `unmatchedInputBehavior` is `'alwaysUndefined'`: on every route
+activation, it iterates over *every* input declared on the routed component and force-sets any
+input with no matching route param/query param/data key to `undefined` — even one that was
+never meant to be route-bound. Since there's no `searchText` key anywhere in the route data,
+the router was explicitly resetting it to `undefined` right after the component initialized,
+which then blew up the first signal read inside `collectionItems()`.
+
+**Fix:**
+
+```ts
+// src/app/app.config.ts
+provideRouter(routes, withComponentInputBinding({ unmatchedInputBehavior: 'undefinedIfStale' }))
+```
+
+`'undefinedIfStale'` only clears an input if it was *previously* populated by route data (i.e.
+genuinely gone stale) — inputs like `searchText` that were never route-bound in the first place
+are left alone, while `CollectionItemDetail.itemId` still gets set correctly from `:id` since
+that one *does* have a matching route param. It's official, stable `@publicApi` — not a
+workaround — documented for exactly this conflict between "auto-bind route data to inputs" and
+"component also has its own signal-based state".
+
 ## Project structure
 
 ```
