@@ -330,6 +330,14 @@ src/app/
 └── app.config.ts
 ```
 
+This layout is a flat, type-based split (`components/`, `pages/`, `models/`, `services/`) — it
+does **not** follow a
+[feature-based Angular architecture](https://blog.nashtechglobal.com/feature-based-angular-architecture-modular-design-for-scalable-applications/)
+(e.g. grouping each feature's component, service, model and routes together in its own folder).
+That's a deliberate choice for a training app this small: the goal here is to keep the focus on
+Angular programming concepts themselves, not on demonstrating a scalable folder structure. A
+real, larger application would likely benefit from organizing by feature instead.
+
 ## Getting started
 
 ```bash
