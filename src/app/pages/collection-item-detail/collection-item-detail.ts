@@ -3,12 +3,13 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CollectionItem, Rarities, Rarity } from '../../models/collection-item';
 import { CollectionItemCard } from '../../components/collection-item-card/collection-item-card';
+import { ConfirmationDialog } from '../../components/confirmation-dialog/confirmation-dialog';
 import { CollectionService } from '../../services/collection-service';
 import { Collection } from '../../models/collection';
 import { Subscription } from 'rxjs';
 
 @Component({
-  imports: [ReactiveFormsModule, CollectionItemCard],
+  imports: [ReactiveFormsModule, CollectionItemCard, ConfirmationDialog],
   selector: 'app-collection-item-detail',
   styleUrl: './collection-item-detail.scss',
   templateUrl: './collection-item-detail.html',
@@ -31,6 +32,7 @@ export class CollectionItemDetail implements OnDestroy {
   selectedCollection!: Collection;
   collectionItem = signal<CollectionItem>(new CollectionItem());
   valueChangeSubscription: Subscription | null = null;
+  showDeleteConfirmation = signal(false);
   itemFormGroup = this.fb.group({
     name: ['', [Validators.required]],
     description: ['', [Validators.required]],
@@ -96,12 +98,17 @@ export class CollectionItemDetail implements OnDestroy {
     this.router.navigate(['/home']);
   }
 
-  delete() {
+  confirmDeletion() {
+    this.showDeleteConfirmation.set(false);
     const currentId = this.itemId();
     if (currentId) {
       this.collectionService.deleteItem(this.selectedCollection.id, currentId);
       this.router.navigate(['/home']);
     }
+  }
+
+  cancelDeletion() {
+    this.showDeleteConfirmation.set(false);
   }
 
   isFieldInvalid(fieldName: string) {
