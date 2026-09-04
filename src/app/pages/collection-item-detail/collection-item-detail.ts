@@ -7,9 +7,10 @@ import { ConfirmationDialog } from '../../components/confirmation-dialog/confirm
 import { CollectionService } from '../../services/collection-service';
 import { Collection } from '../../models/collection';
 import { Subscription } from 'rxjs';
+import { MatButtonModule } from '@angular/material/button';
 
 @Component({
-  imports: [ReactiveFormsModule, CollectionItemCard, ConfirmationDialog],
+  imports: [ReactiveFormsModule, CollectionItemCard, ConfirmationDialog, MatButtonModule],
   selector: 'app-collection-item-detail',
   styleUrl: './collection-item-detail.scss',
   templateUrl: './collection-item-detail.html',

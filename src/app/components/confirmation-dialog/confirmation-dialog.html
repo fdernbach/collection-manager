@@ -3,8 +3,8 @@
         <header>{{ title() }}</header>
         <p class="message">{{ message() }}</p>
         <div class="actions">
-            <button type="button" (click)="confirmed.emit()">Yes</button>
-            <button type="button" (click)="cancelled.emit()">No</button>
+            <button matButton="filled" type="button" (click)="confirmed.emit()">Yes</button>
+            <button matButton="filled" type="button" (click)="cancelled.emit()">No</button>
         </div>
     </div>
 </div>

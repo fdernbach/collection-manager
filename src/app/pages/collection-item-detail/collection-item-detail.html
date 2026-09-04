@@ -1,26 +1,26 @@
-<app-collection-item-card [item]="collectionItem()"/>
+<app-collection-item-card [item]="collectionItem()" />
 <form [formGroup]="itemFormGroup" (submit)="save($event)">
     <div class="form-field">
         <label for="name">Name : </label>
-        <input id="name" name="name" formControlName="name"/>
+        <input id="name" name="name" formControlName="name" />
         @if (isFieldInvalid('name')) {
-            <div class="error">This field is required!</div>
+        <div class="error">This field is required!</div>
         }
     </div>
     <div class="form-field">
         <label for="description">Description : </label>
         <textarea id="description" name="description" formControlName="description" rows="5"></textarea>
         @if (isFieldInvalid('description')) {
-            <div class="error">This field is required!</div>
+        <div class="error">This field is required!</div>
         }
     </div>
     <div class="form-field">
         <!-- No formControlName here: file inputs can't be value-bound by reactive forms,
              so onFileChange reads the file and patches the "image" control manually -->
         <label for="image">Image</label>
-        <input id="image" name="image" type="file" (change)="onFileChange($event)"/>
+        <input id="image" name="image" type="file" (change)="onFileChange($event)" />
         @if (isFieldInvalid('image')) {
-            <div class="error">This field is required.</div>
+        <div class="error">This field is required.</div>
         }
     </div>
     <div class="form-field">
@@ -28,35 +28,33 @@
         <select id="rarity" name="rarity" formControlName="rarity">
             <!-- rarities comes from the component, derived from the Rarities const -->
             @for (rarity of rarities; track rarity) {
-                <option [value]="rarity">{{rarity}}</option>
+            <option [value]="rarity">{{rarity}}</option>
             }
         </select>
     </div>
     <div class="form-field">
         <label for="price">Price : </label>
-        <input id="price" name="price" formControlName="price" type="number"/>
+        <input id="price" name="price" formControlName="price" type="number" />
         @if (isFieldInvalid('price')) {
             @let priceFC = itemFormGroup.get('price');
             @if (priceFC?.hasError('min')) {
-                <div class="error">This value must be bigger or equal to zero</div>
+            <div class="error">This value must be bigger or equal to zero</div>
             } @else {
-                <div class="error">This field is required!</div>
+            <div class="error">This field is required!</div>
             }
         }
     </div>
-    <button type="button" (click)="cancel()">Cancel</button>
-    <button type="submit" [disabled]="itemFormGroup.invalid">
-        Save
-    </button>
-    @if (itemId()) {
-        <button type="button" (click)="showDeleteConfirmation.set(true)">Delete</button>
-    }
+    <div class="action-buttons">
+        <button matButton type="button" (click)="cancel()">Cancel</button>
+        <button matButton="filled" type="submit" [disabled]="itemFormGroup.invalid">
+            Save
+        </button>
+        @if (itemId()) {
+        <button matButton="filled" type="button" (click)="showDeleteConfirmation.set(true)">Delete</button>
+        }
+    </div>
 </form>
 @if (showDeleteConfirmation()) {
-    <app-confirmation-dialog
-        title="Confirm deletion"
-        message="Are you sure you want to delete this object ?"
-        (confirmed)="confirmDeletion()"
-        (cancelled)="cancelDeletion()"
-    />
+<app-confirmation-dialog title="Confirm deletion" message="Are you sure you want to delete this object ?"
+    (confirmed)="confirmDeletion()" (cancelled)="cancelDeletion()" />
 }

@@ -4,10 +4,10 @@ import { Collection } from '../../models/collection';
 import { CollectionService } from '../../services/collection-service';
 import { SearchBar } from '../../components/search-bar/search-bar';
 import { CollectionItemCard } from '../../components/collection-item-card/collection-item-card';
-
+import { MatButtonModule } from '@angular/material/button';
 
 @Component({
-  imports: [SearchBar, CollectionItemCard, RouterLink],
+  imports: [SearchBar, CollectionItemCard, RouterLink, MatButtonModule],
   selector: 'app-collection-detail',
   styleUrl: './collection-detail.scss',
   templateUrl: './collection-detail.html',
