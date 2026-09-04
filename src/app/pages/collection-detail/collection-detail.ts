@@ -1,13 +1,13 @@
 import { Component, computed, inject, model, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { Collection } from '../../models/collection';
 import { CollectionService } from '../../services/collection-service';
-import { CollectionItem } from '../../models/collection-item';
 import { SearchBar } from '../../components/search-bar/search-bar';
 import { CollectionItemCard } from '../../components/collection-item-card/collection-item-card';
 
 
 @Component({
-  imports: [SearchBar, CollectionItemCard],
+  imports: [SearchBar, CollectionItemCard, RouterLink],
   selector: 'app-collection-detail',
   styleUrl: './collection-detail.scss',
   templateUrl: './collection-detail.html',
@@ -33,17 +33,6 @@ export class CollectionDetail {
     const allCollections = this.collectionService.getAll();
     if (allCollections.length > 0) {
       this.selectedCollection.set(allCollections[0]);
-    }
-  }
-
-  addGenericItem() {
-    const collection = this.selectedCollection();
-    if (collection) {
-      // Persist a blank item, then refresh the signal with the service's copy
-      // so the view reflects the item's newly assigned id
-      const storedCollection = this.collectionService.addItem(
-        collection, new CollectionItem());
-      this.selectedCollection.set(storedCollection);
     }
   }
 

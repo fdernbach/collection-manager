@@ -8,20 +8,20 @@
   @for (item of collectionItems(); track item.name) {
     @switch (item.rarity) {
       @case ('Legendary') {
-        <div>
-          <app-collection-item-card [item]="item"></app-collection-item-card> 
+        <div [routerLink]="['/item', item.id]">
+          <app-collection-item-card [item]="item"></app-collection-item-card>
           <hr class="gold"/>
         </div>
       }
       @case ('Rare') {
-        <div>
+        <div [routerLink]="['/item', item.id]">
           <app-collection-item-card [item]="item"></app-collection-item-card>
           <hr class="grey"/>
         </div>
-        
+
       }
       @default {
-        <div>
+        <div [routerLink]="['/item', item.id]">
           <app-collection-item-card [item]="item"></app-collection-item-card>
           <hr class="hidden"/>
         </div>
@@ -35,4 +35,4 @@
 } @else {
   <div class="centered">No item found</div>
 }
-<div class="centered"><button (click)="addGenericItem()">Add Generic Item</button></div>
+<div class="centered"><button [routerLink]="['/item']">Add Item</button></div>

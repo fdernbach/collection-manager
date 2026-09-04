@@ -77,7 +77,31 @@ export class CollectionItemDetail implements OnDestroy {
   
   submit(event: Event) {
     event.preventDefault();
-    console.log(this.itemFormGroup.value);
+    if (this.itemFormGroup.invalid) {
+      return;
+    }
+    const item = Object.assign(new CollectionItem(), this.itemFormGroup.value);
+    const currentId = this.itemId();
+    if (currentId) {
+      // Editing an existing item: keep its id so updateItem replaces the right entry
+      item.id = currentId;
+      this.collectionService.updateItem(this.selectedCollection, item);
+    } else {
+      this.collectionService.addItem(this.selectedCollection, item);
+    }
+    this.router.navigate(['/home']);
+  }
+
+  cancel() {
+    this.router.navigate(['/home']);
+  }
+
+  delete() {
+    const currentId = this.itemId();
+    if (currentId) {
+      this.collectionService.deleteItem(this.selectedCollection.id, currentId);
+      this.router.navigate(['/home']);
+    }
   }
 
   isFieldInvalid(fieldName: string) {
