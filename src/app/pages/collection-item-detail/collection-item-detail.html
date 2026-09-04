@@ -1,7 +1,50 @@
-@let selectedItemId = itemId();
-@if (selectedItemId) {
-    <p>Item {{ selectedItemId }}</p>
-    <button [routerLink]="['/item', selectedItemId + 1]">Next</button>
-} @else {
-    <p>New item !</p>
-}
+<app-collection-item-card [item]="collectionItem()"/>
+<form [formGroup]="itemFormGroup" (submit)="submit($event)">
+    <div class="form-field">
+        <label for="name">Name : </label>
+        <input id="name" name="name" formControlName="name"/>
+        @if (isFieldInvalid('name')) {
+            <div class="error">This field is required!</div>
+        }
+    </div>
+    <div class="form-field">
+        <label for="description">Description : </label>
+        <textarea id="description" name="description" formControlName="description" rows="5"></textarea>
+        @if (isFieldInvalid('description')) {
+            <div class="error">This field is required!</div>
+        }
+    </div>
+    <div class="form-field">
+        <!-- No formControlName here: file inputs can't be value-bound by reactive forms,
+             so onFileChange reads the file and patches the "image" control manually -->
+        <label for="image">Image</label>
+        <input id="image" name="image" type="file" (change)="onFileChange($event)"/>
+        @if (isFieldInvalid('image')) {
+            <div class="error">This field is required.</div>
+        }
+    </div>
+    <div class="form-field">
+        <label for="rarity">Rarity</label>
+        <select id="rarity" name="rarity" formControlName="rarity">
+            <!-- rarities comes from the component, derived from the Rarities const -->
+            @for (rarity of rarities; track rarity) {
+                <option [value]="rarity">{{rarity}}</option>
+            }
+        </select>
+    </div>
+    <div class="form-field">
+        <label for="price">Price : </label>
+        <input id="price" name="price" formControlName="price" type="number"/>
+        @if (isFieldInvalid('price')) {
+            @let priceFC = itemFormGroup.get('price');
+            @if (priceFC?.hasError('min')) {
+                <div class="error">This value must be bigger or equal to zero</div>
+            } @else {
+                <div class="error">This field is required!</div>
+            }
+        }
+    </div>
+    <button type="submit" [disabled]="itemFormGroup.invalid">
+        Save
+    </button>
+</form>

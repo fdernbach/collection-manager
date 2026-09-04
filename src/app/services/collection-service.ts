@@ -1,6 +1,6 @@
 import { Service } from '@angular/core';
 import { Collection } from '../models/collection';
-import { CollectionItem } from '../models/collection-item';
+import { CollectionItem, Rarities } from '../models/collection-item';
 
 @Service()
 export class CollectionService {
@@ -53,7 +53,7 @@ export class CollectionService {
     const coin = new CollectionItem();
     coin.name = 'Pièce de 1972';
     coin.description = 'Pièce de 50 centimes de francs.';
-    coin.rarity = 'Commune';
+    coin.rarity = Rarities.Common;
     coin.image = 'img/coin1.png';
     coin.price = 170;
 
@@ -61,7 +61,7 @@ export class CollectionService {
     const stamp = new CollectionItem();
     stamp.name = 'Timbre 1800';
     stamp.description = 'Un vieux timbre';
-    stamp.rarity = 'Rare';
+    stamp.rarity = Rarities.Rare;
     stamp.image = 'img/timbre1.png';
     stamp.price = 555;
 
