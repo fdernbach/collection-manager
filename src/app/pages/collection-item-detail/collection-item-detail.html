@@ -1,57 +1,64 @@
 <app-collection-item-card [item]="collectionItem()" />
 <form [formGroup]="itemFormGroup" (submit)="save($event)">
-    <div class="form-field">
-        <label for="name">Name : </label>
-        <input id="name" name="name" formControlName="name" />
+    <mat-form-field class="form-field">
+        <mat-label for="name">Name : </mat-label>
+        <input matInput id="name" name="name" formControlName="name" />
         @if (isFieldInvalid('name')) {
-        <div class="error">This field is required!</div>
+        <mat-error>This field is required!</mat-error>
         }
-    </div>
-    <div class="form-field">
-        <label for="description">Description : </label>
-        <textarea id="description" name="description" formControlName="description" rows="5"></textarea>
+    </mat-form-field>
+    <mat-form-field class="form-field">
+        <mat-label for="description">Description : </mat-label>
+        <textarea matInput id="description" name="description" formControlName="description" rows="5"></textarea>
         @if (isFieldInvalid('description')) {
-        <div class="error">This field is required!</div>
+        <mat-error>This field is required!</mat-error>
         }
-    </div>
+    </mat-form-field>
     <div class="form-field">
         <!-- No formControlName here: file inputs can't be value-bound by reactive forms,
-             so onFileChange reads the file and patches the "image" control manually -->
-        <label for="image">Image</label>
-        <input id="image" name="image" type="file" (change)="onFileChange($event)" />
+             so onFileChange reads the file and patches the "image" control manually.
+             The visible button just proxies the click to the hidden native file input. -->
+        <button matButton="elevated" (click)="$event.preventDefault(); imageUploader.click()">
+            Upload Image: {{ imageUploader.files?.[0]?.name || '...' }}
+        </button>
+        <input hidden #imageUploader id="image" name="image" type="file" (change)="onFileChange($event)" />
         @if (isFieldInvalid('image')) {
-        <div class="error">This field is required.</div>
+        <mat-error>This field is required.</mat-error>
         }
     </div>
     <div class="form-field">
         <label for="rarity">Rarity</label>
-        <select id="rarity" name="rarity" formControlName="rarity">
+        <mat-select id="rarity" name="rarity" formControlName="rarity">
             <!-- rarities comes from the component, derived from the Rarities const -->
             @for (rarity of rarities; track rarity) {
-            <option [value]="rarity">{{rarity}}</option>
+            <mat-option [value]="rarity">{{rarity}}</mat-option>
             }
-        </select>
+        </mat-select>
     </div>
-    <div class="form-field">
-        <label for="price">Price : </label>
-        <input id="price" name="price" formControlName="price" type="number" />
+    <mat-form-field class="form-field">
+        <mat-label for="price">Price : </mat-label>
+        <input matInput id="price" name="price" formControlName="price" type="number" />
         @if (isFieldInvalid('price')) {
-            @let priceFC = itemFormGroup.get('price');
-            @if (priceFC?.hasError('min')) {
-            <div class="error">This value must be bigger or equal to zero</div>
-            } @else {
-            <div class="error">This field is required!</div>
-            }
+        @let priceFC = itemFormGroup.get('price');
+        @if (priceFC?.hasError('min')) {
+        <mat-error>This value must be bigger or equal to zero</mat-error>
+        } @else {
+        <mat-error>This field is required!</mat-error>
         }
-    </div>
+        }
+    </mat-form-field>
     <div class="action-buttons">
-        <button matButton type="button" (click)="cancel()">Cancel</button>
-        <button matButton="filled" type="submit" [disabled]="itemFormGroup.invalid">
-            Save
-        </button>
-        @if (itemId()) {
-        <button matButton="filled" type="button" (click)="showDeleteConfirmation.set(true)">Delete</button>
-        }
+        <div class="left">
+            @if (itemId()) {
+            <button class="danger" matButton="filled" type="button" (click)="showDeleteConfirmation.set(true)">Delete</button>
+            }
+        </div>
+        <div class="right">
+            <button matButton type="button" (click)="cancel()">Cancel</button>
+            <button matButton="filled" type="submit" [disabled]="itemFormGroup.invalid">
+                Save
+            </button>
+        </div>
     </div>
 </form>
 @if (showDeleteConfirmation()) {

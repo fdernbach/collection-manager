@@ -1,5 +1,11 @@
 form {
-    max-width: 300px;
+    max-width: 400px;
+    width: calc(100% - 1rem);
+    background-color: white;
+    padding: 1rem;
+    margin-top: 10px;
+    border-radius: 10px;
+    border: 1px solid lightgray;
 }
 
 .form-field {
@@ -32,7 +38,18 @@ app-collection-item-card {
     justify-content: center;
 }
 
-.action-buttons { 
+.action-buttons {
     display: flex;
     gap: 1rem;
+    align-content: space-between;
+}
+
+.action-buttons .left, .action-buttons .right {
+    display: flex;
+    gap: 1rem;
+    flex-grow: 1;
+}
+
+.action-buttons .right {
+    justify-content: right;
 }

@@ -8,9 +8,13 @@ import { CollectionService } from '../../services/collection-service';
 import { Collection } from '../../models/collection';
 import { Subscription } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
 
 @Component({
-  imports: [ReactiveFormsModule, CollectionItemCard, ConfirmationDialog, MatButtonModule],
+  imports: [ReactiveFormsModule, CollectionItemCard, ConfirmationDialog, 
+    MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule],
   selector: 'app-collection-item-detail',
   styleUrl: './collection-item-detail.scss',
   templateUrl: './collection-item-detail.html',
