@@ -10,8 +10,42 @@ export class CollectionService {
   private currentItemIndex: {[key: number]: number} = {};
 
   constructor() {
-    // Seed the service with sample data on startup
-    this.generateDummyData();
+    // Load persisted data on startup instead of always regenerating dummy data
+    this.load();
+  }
+
+  private save() {
+    // Persist the current collections to localStorage as JSON
+    localStorage.setItem('collections', JSON.stringify(this.collections));
+  }
+
+  private load() {
+    // Read the persisted collections, if any
+    const collectionsJson = localStorage.getItem('collections');
+    if (collectionsJson) {
+      // Rebuild proper Collection instances (with working methods like copy()) from plain JSON objects
+      this.collections = JSON.parse(collectionsJson).map((collectionJson: any) => {
+        const collection = Object.assign(new Collection(), collectionJson);
+        const itemsJson = collectionJson['items'] || [];
+        // Rebuild proper CollectionItem instances the same way
+        collection.items = itemsJson.map((item: any) => Object.assign(new CollectionItem(), item));
+        return collection;
+      });
+
+      // Resume the collection id counter after the highest id already stored
+      this.currentId = Math.max(...this.collections.map(collection => collection.id), 0) + 1;
+      // Resume each collection's item id counter after its highest stored item id
+      this.currentItemIndex = this.collections.reduce(
+        (indexes: {[key: number]: number}, collection) => {
+          indexes[collection.id] = Math.max(...collection.items.map(item => item.id), 0) + 1;
+          return indexes;
+        }, {}
+      );
+    } else {
+      // Nothing persisted yet: seed with sample data and persist it
+      this.generateDummyData();
+      this.save();
+    }
   }
 
   generateDummyData() {
@@ -75,6 +109,8 @@ export class CollectionService {
     this.currentItemIndex[storedCopy.id] = 1;
     // Advance the next collection id
     this.currentId++;
+    // Persist the change
+    this.save();
 
     // Hand back a copy of what was stored
     return storedCopy.copy();
@@ -91,6 +127,8 @@ export class CollectionService {
 
     // Merge the incoming fields onto the stored collection
     Object.assign(storedCopy, collection);
+    // Persist the change
+    this.save();
     // Return a copy of the updated collection
     return storedCopy.copy();
 
@@ -101,6 +139,8 @@ export class CollectionService {
     this.collections = this.collections.filter(
       collection => collection.id !== collectionId
     );
+    // Persist the change
+    this.save();
   }
 
   addItem(collection: Collection, item: CollectionItem): Collection | null {
@@ -112,13 +152,17 @@ export class CollectionService {
     // Unknown collection: nothing to add to
     if (!storedCollection) return null;
 
-    // Assign the item the next id available within this collection
-    item.id = this.currentItemIndex[storedCollection.id];
-    // Advance this collection's item id counter
-    this.currentItemIndex[storedCollection.id]++;
+    // Copy the incoming item so we own our own instance
+    const storedItem = item.copy();
+    // Assign it the next id available within this collection
+    storedItem.id = this.currentItemIndex[collection.id];
+    // Store it inside the collection
+    storedCollection.items.push(storedItem);
 
-    // Store a copy of the item inside the collection
-    storedCollection.items.push(item.copy());
+    // Advance this collection's item id counter
+    this.currentItemIndex[collection.id]++;
+    // Persist the change
+    this.save();
 
     // Return a copy of the updated collection
     return storedCollection.copy();
@@ -143,6 +187,8 @@ export class CollectionService {
 
     // Replace the stored item with a copy of the updated one
     storedCollection.items[storedItemIndex] = item.copy();
+    // Persist the change
+    this.save();
     // Return a copy of the updated collection
     return storedCollection.copy();
   }
@@ -160,9 +206,10 @@ export class CollectionService {
     storedCollection.items = storedCollection.items.filter(
       item => item.id !== itemId
     )
+    // Persist the change
+    this.save();
 
     // Return a copy of the updated collection
     return storedCollection.copy();
   }
-  
 }
