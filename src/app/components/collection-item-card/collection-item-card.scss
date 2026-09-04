@@ -1,0 +1,71 @@
+:host {
+  display: flex;
+}
+
+.collection-item-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #f0f6ff;
+  border: 1px solid #8ca3c7;
+  border-radius: 12px;
+  padding: 1rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  width: 16rem;
+  cursor: pointer;
+}
+
+.collection-item-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.rarity-chip {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  background: #4a6cf7;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.item-image {
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.item-image img {
+  width: 100%;
+  max-width: 12rem;
+  height: 12rem;
+  object-fit: contain;
+}
+
+.item-header {
+  margin-top: 1rem;
+}
+
+.item-name {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.item-description {
+  margin: 0.75rem 0;
+  color: #334155;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  flex-grow: 1;
+}
+
+.item-price {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e8a3a;
+  margin: 0;
+}
+

@@ -1,1 +1,9 @@
-/* You can add global styles to this file, and also import other style files */
+body {
+  height: 100vh;
+  background: linear-gradient(
+    135deg,
+    rgba(245, 230, 255, 1) 0%,   /* light blue */
+    rgba(230, 240, 255, 1) 50%,  /* light purple */
+    rgba(245, 230, 255, 1) 100%  /* light yellow */
+  );
+}/* You can add global styles to this file, and also import other style files */

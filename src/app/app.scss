@@ -1,0 +1,45 @@
+#collection-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 1rem;
+}
+
+.collection-grid {
+  display: flex;
+  width: 100%;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.collection-grid > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.collection-grid app-collection-item-card {
+  flex: 1;
+}
+
+.centered {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.collection-grid hr {
+  width: 100%;
+  margin-inline: 0;
+}
+
+hr.gold {
+  border-color: goldenrod;
+}
+
+hr.grey {
+  border-style: dashed;
+}
+
+hr.hidden {
+  visibility: hidden;
+}
