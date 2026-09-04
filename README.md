@@ -9,6 +9,26 @@ syntax, services, the Router, Reactive Forms, and Angular Material — with no b
 > `docs/screenshots/home.png` (the grid view) and `docs/screenshots/item-form.png`
 > (the item edit form) — the folder already exists, empty, waiting for them.
 
+## Table of contents
+
+- [What it looks like](#what-it-looks-like)
+- [Angular features covered](#angular-features-covered)
+  - [1. Signal inputs](#1-signal-inputs)
+  - [2. Outputs, signal outputs, and `model()`](#2-outputs-signal-outputs-and-model)
+  - [3. Change detection: signals + `OnPush`](#3-change-detection-signals--onpush)
+  - [4. Loops and conditions — the new control-flow syntax](#4-loops-and-conditions--the-new-control-flow-syntax)
+  - [5. Services](#5-services)
+  - [6. Routes](#6-routes)
+  - [7. Reactive forms](#7-reactive-forms)
+  - [8. Angular Material](#8-angular-material)
+- [Funky Angular gotchas encountered building this](#funky-angular-gotchas-encountered-building-this)
+  - [`withComponentInputBinding()` silently nukes unrelated component inputs](#withcomponentinputbinding-silently-nukes-unrelated-component-inputs)
+- [Project structure](#project-structure)
+- [Getting started](#getting-started)
+- [Testing — two different levels](#testing--two-different-levels)
+  - [`ng test` — unit & integration tests](#ng-test--unit--integration-tests-srcappspects)
+  - [`npm run e2e` — end-to-end tests](#npm-run-e2e--end-to-end-tests-e2espects)
+
 ## What it looks like
 
 **Home — the collection grid, with live search and an "Add Item" action:**
