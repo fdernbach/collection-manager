@@ -62,11 +62,17 @@ export class LoginService {
         // Same shape as login()/getUser(): builds a POST /logout request with a
         // tap() side effect to clear local session state once the server confirms.
         return this.http.post(this.BASE_URL + '/logout', {}).pipe(
-            tap(() => {
-                localStorage.removeItem(LK_TOKEN);
-                this.user.set(null);
-            })
+            tap(() => this.clearSession())
         );
+    }
+
+    // Shared by logout() (once the server confirms) and isLoggedInGuard (when a
+    // stored token turns out to be invalid) — anything that discovers "there is
+    // no valid session" clears the same two pieces of state the same way, so
+    // they can't drift out of sync with each other.
+    clearSession() {
+        localStorage.removeItem(LK_TOKEN);
+        this.user.set(null);
     }
     
 }

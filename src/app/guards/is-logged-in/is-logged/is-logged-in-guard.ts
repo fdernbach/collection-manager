@@ -33,7 +33,7 @@ export const isLoggedInGuard: CanActivateFn = (route, state) => {
     // Ask the server (GET /me via LoginService.getUser()). map() turns a
     // successful response into `true`, letting the guarded navigation
     // proceed. catchError() runs on a 401 (no valid token attached by the
-    // auth interceptor) when there's really no session at all — it must
+    // auth interceptor, or a stored token that's expired/invalid) — it must
     // resolve to a UrlTree (via router.createUrlTree(), wrapped in of()
     // since catchError needs an Observable back), which the router treats
     // as "redirect here instead". Returning router.navigate()'s resolved
@@ -41,9 +41,18 @@ export const isLoggedInGuard: CanActivateFn = (route, state) => {
     // *imperative* navigation to /login succeeded, not whether this guard
     // should allow the original route — a successful redirect would
     // resolve to `true` and incorrectly let the guarded route through too.
+    //
+    // clearSession() here matters: without it, user() would stay undefined
+    // after a failed check, so the NEXT guarded navigation would repeat this
+    // same doomed /me request against the same bad token forever. Clearing
+    // it moves user() to null, so a future attempt takes the synchronous
+    // null-branch below instead of retrying a request that's known to fail.
     return loginService.getUser().pipe(
       map(_ => true),
-      catchError(_ => of(router.createUrlTree(['login'])))
+      catchError(_ => {
+        loginService.clearSession();
+        return of(router.createUrlTree(['login']));
+      })
     )
   }
 
