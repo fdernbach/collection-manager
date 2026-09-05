@@ -1,7 +1,7 @@
 import { Component, computed, inject, model, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Collection } from '../../models/collection';
-import { CollectionService } from '../../services/collection-service';
+import { CollectionService } from '../../services/collection/collection-service';
 import { SearchBar } from '../../components/search-bar/search-bar';
 import { CollectionItemCard } from '../../components/collection-item-card/collection-item-card';
 import { MatButtonModule } from '@angular/material/button';

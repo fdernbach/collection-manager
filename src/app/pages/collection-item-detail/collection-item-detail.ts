@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { CollectionItem, Rarities, Rarity } from '../../models/collection-item';
 import { CollectionItemCard } from '../../components/collection-item-card/collection-item-card';
 import { ConfirmationDialog } from '../../components/confirmation-dialog/confirmation-dialog';
-import { CollectionService } from '../../services/collection-service';
+import { CollectionService } from '../../services/collection/collection-service';
 import { Collection } from '../../models/collection';
 import { Subscription } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';

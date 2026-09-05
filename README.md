@@ -2,12 +2,9 @@
 
 A small collectibles catalog (coins, stamps, figurines…) built as a hands-on tour of modern
 Angular (v22): signal inputs/outputs, fine-grained change detection, the new control-flow
-syntax, services, the Router, Reactive Forms, and Angular Material — with no backend, just
-`localStorage`.
-
-> 📸 To make the screenshots below render, save your two reference screenshots as
-> `docs/screenshots/home.png` (the grid view) and `docs/screenshots/item-form.png`
-> (the item edit form) — the folder already exists, empty, waiting for them.
+syntax, services, the Router, Reactive Forms, and Angular Material. Collections themselves are
+still `localStorage`-backed, but authentication (see [section 9](#9-authentication)) is a real
+JWT login flow against `angular-collection-management-backend/`, a small Express + SQLite API.
 
 ## Table of contents
 
@@ -21,6 +18,7 @@ syntax, services, the Router, Reactive Forms, and Angular Material — with no b
   - [6. Routes](#6-routes)
   - [7. Reactive forms](#7-reactive-forms)
   - [8. Angular Material](#8-angular-material)
+  - [9. Authentication](#9-authentication)
 - [Funky Angular gotchas encountered building this](#funky-angular-gotchas-encountered-building-this)
   - [`withComponentInputBinding()` silently nukes unrelated component inputs](#withcomponentinputbinding-silently-nukes-unrelated-component-inputs)
 - [Project structure](#project-structure)
@@ -31,7 +29,12 @@ syntax, services, the Router, Reactive Forms, and Angular Material — with no b
 
 ## What it looks like
 
-**Home — the collection grid, with live search and an "Add Item" action:**
+**Login — a Reactive Forms page guarding access to the rest of the app:**
+
+![Login view](docs/screenshots/login.png)
+
+**Home — the collection grid, with the authenticated user's nav (avatar, name, collections,
+logout) alongside live search and an "Add Item" action:**
 
 ![Home view](docs/screenshots/home.png)
 
@@ -294,6 +297,170 @@ html {
 }
 ```
 
+### 9. Authentication
+
+A JWT login flow against a real backend (`angular-collection-management-backend/`, a small
+Express + SQLite API — see its own `/api-docs` for the full route list), built from four
+cooperating pieces: a login page, a service wrapping the auth endpoints, a route guard, and an
+HTTP interceptor. None of them know about each other directly — they're stitched together
+entirely through `LoginService`'s shared `user` signal and one exported storage-key constant.
+
+**The login page** (`src/app/pages/login/login.ts` + `login.html`) is a Reactive Form with two
+required controls; the submit button stays disabled until both are filled in:
+
+```ts
+loginFormGroup = this.formBuilder.group({
+  'username': ['', [Validators.required]],
+  'password': ['', [Validators.required]]
+});
+
+invalidCredentials = signal(false);
+```
+
+`login()` doesn't do the whole job itself — a successful `/login` response only proves the
+credentials were right and returns a token, not the user's name. So success there just kicks
+off a second request, `getUserInformation()`, before finally navigating:
+
+```ts
+login(event: Event) {
+  const loginSubscription = this.loginService.login(
+    this.loginFormGroup.value as LoginCredentialsDTO
+  ).subscribe({
+    next: () => this.getUserInformation(),
+    error: () => this.invalidCredentials.set(true)
+  });
+  this.subscriptions.add(loginSubscription);
+}
+
+getUserInformation() {
+  const getUserSubscription = this.loginService.getUser().subscribe(user => {
+    this.navigateHome();
+  });
+  this.subscriptions.add(getUserSubscription);
+}
+```
+
+Both requests are collected into one `Subscription` bag (`Subscription.add(...)`) instead of a
+separate field per request, so `ngOnDestroy()` can tear all of them down in a single call if the
+user navigates away mid-request:
+
+```ts
+private subscriptions = new Subscription();
+// ...
+ngOnDestroy(): void {
+  this.subscriptions.unsubscribe();
+}
+```
+
+**`LoginService`** (`src/app/services/login/login-service.ts`) wraps the three auth endpoints.
+Each method returns a *cold* Observable — `http.post`/`http.get` describe the request but don't
+send it; nothing happens on the network until a caller `.subscribe()`s:
+
+```ts
+login(credentials: LoginCredentialsDTO) {
+  return this.http.post(this.BASE_URL + "/login", credentials).pipe(
+    tap((result: any) => {
+      localStorage.setItem(LK_TOKEN, result['token']);
+    })
+  );
+}
+```
+
+`tap()` is a side-effect operator — it runs the callback but re-emits the *same* value
+untouched, which is all `login()` needs (save the token, let the raw response continue on).
+`getUser()` needs more: it also *transforms* what subscribers receive, via `map()`, and updates
+the shared `user` signal that the rest of the app (the nav shell, the guard below) reads
+reactively:
+
+```ts
+user = signal<User | null | undefined>(undefined);
+
+getUser() {
+  return this.http.get(this.BASE_URL + '/me').pipe(
+    tap((result: any) => {
+      const user = Object.assign(new User(), result);
+      this.user.set(user);
+    }),
+    map(() => this.user())
+  );
+}
+```
+
+`user` deliberately has three states, not two — `undefined` (unknown, never checked) and `null`
+(confirmed logged out) are treated differently by the guard below. The storage key itself is
+exported as a constant, not repeated as a string, precisely so the interceptor can never drift
+out of sync with what this service writes:
+
+```ts
+export const LK_TOKEN = 'TOKEN';
+```
+
+**`isLoggedInGuard`** (`src/app/guards/is-logged-in/is-logged/is-logged-in-guard.ts`) is a
+`CanActivateFn`, registered per-route in `app.routes.ts` — it is not applied globally or
+inherited by child routes, so every route that needs protection lists it explicitly:
+
+```ts
+// src/app/app.routes.ts
+{
+  path: 'home',
+  component: CollectionDetail,
+  canActivate: [isLoggedInGuard]
+},
+```
+
+The guard's job is entirely driven by which of the three `user` states it currently sees:
+
+```ts
+export const isLoggedInGuard: CanActivateFn = (route, state) => {
+  const loginService = inject(LoginService);
+  const router = inject(Router);
+
+  if (loginService.user() == undefined) {
+    // Unknown yet (e.g. a fresh page reload) — ask the server before deciding.
+    return loginService.getUser().pipe(
+      map(_ => true),
+      catchError(_ => router.navigate(['login']))
+    )
+  }
+
+  if (loginService.user() == null) {
+    // Already confirmed logged out (set by logout()) — no need to ask again.
+    router.navigate(['login']);
+  }
+
+  return true;
+};
+```
+
+`undefined` and `null` can't be collapsed into one "no user" check: `undefined` means the answer
+is unknown and worth an async round trip to `/me`, while `null` means the answer is already
+known for certain, so redirecting synchronously (no wasted request) is enough.
+
+**`authTokenInterceptor`** (`src/app/interceptors/auth-token/auth-token-interceptor.ts`) is a
+functional `HttpInterceptorFn` — the mechanism that actually gets the stored token onto every
+outgoing request, without any component or service having to remember to attach it manually:
+
+```ts
+export const authTokenInterceptor: HttpInterceptorFn = (req, next) => {
+  const token = localStorage.getItem(LK_TOKEN);
+  let requestToSend = req;
+  if (token) {
+    const headers = req.headers.set('Authorization', 'Bearer ' + token);
+    requestToSend = req.clone({ headers });
+  }
+  return next(requestToSend);
+};
+```
+
+`HttpRequest` is immutable, so attaching a header means building a new `HttpHeaders` (`.set()`
+returns a copy) and a new request carrying it (`.clone()`), rather than mutating `req` in place.
+An interceptor function is inert on its own, though — it only runs because it's registered:
+
+```ts
+// src/app/app.config.ts
+provideHttpClient(withInterceptors([authTokenInterceptor]))
+```
+
 ## Funky Angular gotchas encountered building this
 
 Real dev-time surprises worth remembering, so they don't have to be rediscovered.
@@ -343,9 +510,17 @@ src/app/
 ├── pages/                # Routed views
 │   ├── collection-detail/       (the grid, "/home")
 │   ├── collection-item-detail/  (create/edit form, "/item" and "/item/:id")
+│   ├── login/                   (Reactive Form login page, "/login")
 │   └── not-found/
-├── models/               # Plain data classes (Collection, CollectionItem, Rarity)
-├── services/             # CollectionService (localStorage-backed persistence)
+├── models/               # Plain data classes (Collection, CollectionItem, Rarity, User)
+├── services/
+│   ├── collection/       # CollectionService (localStorage-backed persistence)
+│   └── login/            # LoginService (JWT login/getUser/logout against the real backend)
+├── guards/
+│   └── is-logged-in/     # isLoggedInGuard — CanActivateFn protecting authenticated routes
+├── interceptors/
+│   └── auth-token/       # authTokenInterceptor — attaches the stored JWT to every request
+├── app.ts / app.html      # Root shell: user nav (avatar, collections, logout) + <router-outlet>
 ├── app.routes.ts
 └── app.config.ts
 ```

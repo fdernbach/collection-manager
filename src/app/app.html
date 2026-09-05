@@ -1,1 +1,32 @@
-<router-outlet></router-outlet>
+<div id="page-container">
+    @let currentUser = user();
+    @if (currentUser) {
+        <nav>
+            <header>
+                <span class="avatar">{{ currentUser.firstname.charAt(0) }}</span>
+                {{ currentUser.firstname }} {{ currentUser.lastname }}
+            </header>
+            <ul>
+                <li class="selected">
+                    <div class="dot"></div>
+                    <div class="collection">
+                        <div class="name">Default Collection</div>
+                        <div class="items-count">5 items</div>
+                    </div>
+                </li>
+            </ul>
+            <footer>
+                <button
+                    matButton="filled"
+                    class="danger"
+                    (click)="logout()"
+                >
+                    Logout
+                </button>
+            </footer>
+        </nav>
+    }
+    <main>
+        <router-outlet></router-outlet>
+    </main>
+</div>

@@ -1,6 +1,6 @@
 import { Service } from '@angular/core';
-import { Collection } from '../models/collection';
-import { CollectionItem, Rarities } from '../models/collection-item';
+import { Collection } from '../../models/collection';
+import { CollectionItem, Rarities } from '../../models/collection-item';
 
 @Service()
 export class CollectionService {

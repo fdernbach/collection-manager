@@ -3,7 +3,7 @@ import { provideRouter, Router, withComponentInputBinding } from '@angular/route
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
 import { CollectionItemDetail } from './collection-item-detail';
-import { CollectionService } from '../../services/collection-service';
+import { CollectionService } from '../../services/collection/collection-service';
 
 // An "integration" test: it drives the real Router (with the app's real route config)
 // so CollectionItemDetail receives its `:id` input exactly the way it does in the running
