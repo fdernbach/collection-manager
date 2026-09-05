@@ -305,6 +305,9 @@ cooperating pieces: a login page, a service wrapping the auth endpoints, a route
 HTTP interceptor. None of them know about each other directly — they're stitched together
 entirely through `LoginService`'s shared `user` signal and one exported storage-key constant.
 
+> 🔑 To log in, use `admin` / `admin1234` — the only account the backend seeds by default (see
+> `angular-collection-management-backend/server.js`).
+
 **The login page** (`src/app/pages/login/login.ts` + `login.html`) is a Reactive Form with two
 required controls; the submit button stays disabled until both are filled in:
 
@@ -542,12 +545,17 @@ real, larger application would likely benefit from organizing by feature instead
 
 ## Getting started
 
+Authentication (see [section 9](#9-authentication)) needs the real backend running — start
+`angular-collection-management-backend/` first (`docker-compose up`, or `npm install && node
+server.js`), then the frontend:
+
 ```bash
 npm install
 ng serve
 ```
 
-Open `http://localhost:4200/` — the app reloads automatically as you edit source files.
+Open `http://localhost:4200/` — the app reloads automatically as you edit source files. Log in
+with `admin` / `admin1234`, the account the backend seeds by default.
 
 ```bash
 ng build   # production build, output in dist/
