@@ -8,10 +8,20 @@ const sampleImage = path.join(__dirname, 'fixtures', 'sample-image.png');
 // browser via `ng serve` (see playwright.config.ts's webServer), exactly as a user would.
 test.describe('Collection Manager', () => {
   test.beforeEach(async ({ page }) => {
-    // Start every test from a clean slate: clear whatever a previous run left in
-    // localStorage, then reload so CollectionService reseeds its 3 dummy items.
-    await page.goto('/home');
-    await page.evaluate(() => localStorage.clear());
+    // '/home' and '/item' are guarded by isLoggedInGuard, so every test needs a real
+    // session first — log in against the actual backend (admin/admin1234, seeded by
+    // angular-collection-management-backend/server.js) before anything else.
+    await page.goto('/login');
+    await page.fill('input[formcontrolname="username"]', 'admin');
+    await page.fill('input[formcontrolname="password"]', 'admin1234');
+    await page.getByRole('button', { name: 'Login' }).click();
+    await page.waitForURL('**/home');
+
+    // Start every test from a clean slate: clear whatever a previous run left in the
+    // (separate, localStorage-backed) CollectionService state, then reload so it
+    // reseeds its 3 dummy items. Only that key is removed, not the whole of
+    // localStorage, so the auth token from the login above survives the reload.
+    await page.evaluate(() => localStorage.removeItem('collections'));
     await page.reload();
   });
 

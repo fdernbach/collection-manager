@@ -4,6 +4,8 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
 import { CollectionItemDetail } from './collection-item-detail';
 import { CollectionService } from '../../services/collection/collection-service';
+import { LoginService } from '../../services/login/login-service';
+import { User } from '../../models/user';
 
 // An "integration" test: it drives the real Router (with the app's real route config)
 // so CollectionItemDetail receives its `:id` input exactly the way it does in the running
@@ -19,6 +21,12 @@ describe('CollectionItemDetail (integration)', () => {
         provideRouter(routes, withComponentInputBinding({ unmatchedInputBehavior: 'undefinedIfStale' })),
       ],
     });
+
+    // '/item' routes are guarded by isLoggedInGuard. Setting the shared `user`
+    // signal directly (rather than actually logging in over HTTP) puts the
+    // guard straight into its "already confirmed logged in" branch, so it
+    // resolves synchronously with no backend involved.
+    TestBed.inject(LoginService).user.set(Object.assign(new User(), { username: 'test-user' }));
   });
 
   it('loads the matching item into the form when navigating to /item/:id', async () => {

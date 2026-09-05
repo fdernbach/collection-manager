@@ -415,17 +415,17 @@ export const isLoggedInGuard: CanActivateFn = (route, state) => {
   const loginService = inject(LoginService);
   const router = inject(Router);
 
-  if (loginService.user() == undefined) {
+  if (loginService.user() === undefined) {
     // Unknown yet (e.g. a fresh page reload) — ask the server before deciding.
     return loginService.getUser().pipe(
       map(_ => true),
-      catchError(_ => router.navigate(['login']))
+      catchError(_ => of(router.createUrlTree(['login'])))
     )
   }
 
-  if (loginService.user() == null) {
+  if (loginService.user() === null) {
     // Already confirmed logged out (set by logout()) — no need to ask again.
-    router.navigate(['login']);
+    return router.createUrlTree(['login']);
   }
 
   return true;
@@ -435,6 +435,13 @@ export const isLoggedInGuard: CanActivateFn = (route, state) => {
 `undefined` and `null` can't be collapsed into one "no user" check: `undefined` means the answer
 is unknown and worth an async round trip to `/me`, while `null` means the answer is already
 known for certain, so redirecting synchronously (no wasted request) is enough.
+
+Two details that look minor but change actual behavior: the checks use strict `===`, not `==`
+— `null == undefined` is `true` in JS, so a loose check would make the first branch swallow the
+second, and the null-specific redirect would never run. And redirecting means *returning* a
+`UrlTree` (`router.createUrlTree([...])`), not imperatively calling `router.navigate([...])` and
+returning `true`/its resolved boolean — the latter tells the router two contradictory things at
+once ("go to /login" and "yes, activate the originally guarded route").
 
 **`authTokenInterceptor`** (`src/app/interceptors/auth-token/auth-token-interceptor.ts`) is a
 functional `HttpInterceptorFn` — the mechanism that actually gets the stored token onto every
