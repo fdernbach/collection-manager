@@ -19,7 +19,7 @@ export class CollectionDetail {
 
   private collectionService = inject(CollectionService);
   private router = inject(Router);
-  // Two-way bound to the search bar; drives the filter in collectionItems()
+  // Two-way bound to the search bar; drives the filter in displayedItems()
   searchText = model('');
 
   collectionId = input<number | undefined, string | undefined>(undefined, {
