@@ -8,6 +8,7 @@ import { CollectionItemDetail } from './collection-item-detail';
 import { LoginService } from '../../services/login/login-service';
 import { User } from '../../models/user';
 import { ICollectionItemDTO } from '../../interfaces/collection-item-dto';
+import { ICollectionDTO } from '../../interfaces/collection-dto';
 
 // An "integration" test: it drives the real Router (with the app's real route config)
 // so CollectionItemDetail receives its `:id` input exactly the way it does in the running
@@ -25,6 +26,11 @@ describe('CollectionItemDetail (integration)', () => {
     rarity: 'Common',
     price: 170,
     collectionId: 1,
+  };
+
+  const collectionDTO: ICollectionDTO = {
+    id: 1,
+    title: 'Collection mix',
   };
 
   beforeEach(() => {
@@ -55,6 +61,8 @@ describe('CollectionItemDetail (integration)', () => {
     const component = await harness.navigateByUrl('/item/1', CollectionItemDetail);
 
     httpMock.expectOne('http://localhost:3000/items/1').flush(coinDTO);
+    // itemCollection$ fires right behind collectionItem$ to load the item's own collection.
+    httpMock.expectOne('http://localhost:3000/collections/1').flush(collectionDTO);
     harness.detectChanges();
 
     expect(component.itemFormGroup.value.name).toBe('Pièce de 1972');
@@ -70,26 +78,23 @@ describe('CollectionItemDetail (integration)', () => {
     expect(component.itemFormGroup.value.name).toBe('');
   });
 
-  // itemCollection$ — the pipeline that would redirect away on a failed lookup —
-  // is defined but never subscribed (see the NOTE above it in collection-item-detail.ts),
-  // so a failed item lookup currently has no error handling at all: no redirect,
-  // no message, the route just stays put with a blank form.
-  it('does not navigate away when the item id does not match any stored item', async () => {
+  it('navigates to /not-found when the item id does not match any stored item', async () => {
     const harness = await RouterTestingHarness.create();
     await harness.navigateByUrl('/item/999', CollectionItemDetail);
 
     httpMock
       .expectOne('http://localhost:3000/items/999')
       .flush({ error: 'not found' }, { status: 404, statusText: 'Not Found' });
-    harness.detectChanges();
+    await harness.fixture.whenStable();
 
-    expect(TestBed.inject(Router).url).toBe('/item/999');
+    expect(TestBed.inject(Router).url).toBe('/not-found');
   });
 
   it('deletes the item and navigates back when a deletion is confirmed', async () => {
     const harness = await RouterTestingHarness.create();
     const component = await harness.navigateByUrl('/item/1', CollectionItemDetail);
     httpMock.expectOne('http://localhost:3000/items/1').flush(coinDTO);
+    httpMock.expectOne('http://localhost:3000/collections/1').flush(collectionDTO);
     harness.detectChanges();
 
     component.confirmDeletion();

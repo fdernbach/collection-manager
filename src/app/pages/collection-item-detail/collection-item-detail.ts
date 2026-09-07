@@ -7,7 +7,7 @@ import { CollectionItemCard } from '../../components/collection-item-card/collec
 import { ConfirmationDialog } from '../../components/confirmation-dialog/confirmation-dialog';
 import { CollectionService } from '../../services/collection/collection-service';
 import { CollectionItemService } from '../../services/collection-item/collection-item-service';
-import { catchError, EMPTY, filter, switchMap, tap } from 'rxjs';
+import { catchError, EMPTY, filter, share, switchMap, tap } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -49,8 +49,8 @@ export class CollectionItemDetail {
   // selectedCollection — the one MainMenu sets when the user picks a collection —
   // so navigating here without changing collections stays consistent with it, but
   // stays locally writable so itemCollection$'s tap can update it per the item
-  // actually loaded (relevant once that pipeline is subscribed — see its NOTE above).
-  // Read by formValueChanges$ to stamp collectionId onto the reconstructed item.
+  // actually loaded. Read by formValueChanges$ to stamp collectionId onto the
+  // reconstructed item.
   selectedCollection = linkedSignal(() =>
     this.collectionService.selectedCollection());
 
@@ -70,32 +70,46 @@ export class CollectionItemDetail {
   // above stays as the default for that case.
   // takeUntilDestroyed() self-unsubscribes on component destroy; no manual
   // Subscription bookkeeping needed like the old valueChangeSubscription approach.
+  // catchError is nested *inside* switchMap's callback (scoped to each individual
+  // get() call) rather than chained after it: that way a failed lookup only ends
+  // that one inner request. Placing catchError after switchMap instead would let a
+  // single error propagate out through switchMap and complete the whole outer
+  // pipe (including the toObservable(itemId) source), permanently killing
+  // reactivity — a later navigation to a valid id would never refire this pipeline.
+  // share() at the end makes this a hot, multicast observable: itemCollection$
+  // below subscribes to this same field as its source, and without share() that
+  // second subscription would independently re-run the whole chain — including
+  // firing a second, redundant collectionItemService.get() HTTP call — every time.
   collectionItem$ = toObservable(this.itemId).pipe(
     takeUntilDestroyed(),
     filter(itemId => itemId !== null),
-    switchMap(itemId => this.collectionItemService.get(itemId)),
+    switchMap(itemId => this.collectionItemService.get(itemId).pipe(
+      catchError(() => {
+        this.router.navigate(['/not-found']);
+        return EMPTY;
+      })
+    )),
     tap(item => {
       this.collectionItem.set(item);
       this.itemFormGroup.patchValue(item);
     }),
+    share(),
   );
 
   // Piped off collectionItem$ (not itemId directly) so it re-fires with each newly
   // loaded item's collectionId, keeping selectedCollection in sync with whichever
-  // item is currently shown. catchError swallows a failed lookup (e.g. a stale/
+  // item is currently shown. catchError (again nested inside switchMap, for the
+  // same reason as collectionItem$ above) swallows a failed lookup (e.g. a stale/
   // deleted collectionId) by navigating away and returning EMPTY, so the error
-  // doesn't propagate and silently kill the subscription for good.
-  // NOTE: like collectionItem$ and formValueChanges$, this is just a definition —
-  // an RxJS Observable does nothing until something calls .subscribe() on it. Unlike
-  // the other two, nothing subscribes to itemCollection$ (see constructor), so this
-  // pipeline currently never runs.
+  // doesn't propagate and kill the subscription for good.
   itemCollection$ = this.collectionItem$.pipe(
     takeUntilDestroyed(),
-    switchMap(item => this.collectionService.get(item.collectionId)),
-    catchError(error => {
-      this.navigateBack();
-      return EMPTY;
-    }),
+    switchMap(item => this.collectionService.get(item.collectionId).pipe(
+      catchError(() => {
+        this.navigateBack();
+        return EMPTY;
+      })
+    )),
     tap(collection => {
       this.selectedCollection.set(collection);
     })
@@ -136,6 +150,7 @@ export class CollectionItemDetail {
     // actually starts each pipeline; takeUntilDestroyed() then tears it down
     // automatically when the component is destroyed.
     this.collectionItem$.subscribe();
+    this.itemCollection$.subscribe();
     this.formValueChanges$.subscribe();
   }
 
