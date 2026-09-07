@@ -70,9 +70,9 @@ export class Login implements OnDestroy {
 
   private navigateRoot() {
     this.invalidCredentials.set(false);
-    // No route guard exists yet on '/home' — this is a straight redirect,
-    // not an authorization check. Protecting the route would be a CanActivate
-    // guard that checks for a stored token.
+    // Navigates to '/', which app.routes.ts redirects to '/collection'. This is
+    // a straight redirect, not an authorization check — protecting the route
+    // is what isLoggedInGuard (already applied to '/collection') is for.
     this.router.navigate(['/']);
   }
 

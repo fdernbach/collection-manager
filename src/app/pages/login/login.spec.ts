@@ -76,7 +76,7 @@ describe('Login (integration)', () => {
     expect(localStorage.getItem(LK_TOKEN)).toBeNull();
   });
 
-  it('stores the token, fetches the user, and navigates to /home on a successful login', async () => {
+  it('stores the token, fetches the user, and navigates to /collection on a successful login', async () => {
     fillForm('admin', 'admin1234');
     await fixture.whenStable();
     submit();
@@ -90,6 +90,7 @@ describe('Login (integration)', () => {
     await fixture.whenStable();
 
     expect(localStorage.getItem(LK_TOKEN)).toBe('fake-jwt');
-    expect(router.url).toBe('/home');
+    // login.ts navigates to '/', which app.routes.ts redirects to '/collection'.
+    expect(router.url).toBe('/collection');
   });
 });
