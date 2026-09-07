@@ -8,18 +8,23 @@ import { isLoggedInGuard } from './guards/is-logged-in/is-logged/is-logged-in-gu
 export const routes: Routes = [
     {
         path: '',
-        redirectTo: 'home',
+        redirectTo: 'collection',
         pathMatch: 'full'
     },
     {
-        path: 'home',
-        component: CollectionDetail,
-        // canActivate runs isLoggedInGuard before the router activates this
-        // route. Returning `true` (or an Observable that emits `true`) lets
-        // navigation continue; returning `false`/redirecting blocks it. Every
-        // route that should require a logged-in user needs this listed
-        // explicitly — it is NOT inherited by children or applied globally.
-        canActivate: [isLoggedInGuard]
+        path: 'collection',
+        children: [
+            {
+                path: '',
+                component: CollectionDetail,
+                canActivate: [isLoggedInGuard]
+            },
+            {
+                path: ':id',
+                component: CollectionDetail,
+                canActivate: [isLoggedInGuard]
+            }
+        ]
     },
     {
         path: 'item',

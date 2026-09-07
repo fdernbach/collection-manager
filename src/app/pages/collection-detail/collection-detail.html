@@ -5,7 +5,7 @@
   </div>
 </header>
 <section class="collection-grid">
-  @for (item of collectionItems(); track item.name) {
+  @for (item of displayedItems(); track item.name) {
     @switch (item.rarity) {
       @case ('Legendary') {
         <div [routerLink]="['/item', item.id]">
@@ -29,7 +29,7 @@
     }
   }
 </section>
-@let itemCount = collectionItems()?.length;
+@let itemCount = displayedItems()?.length;
 @if (itemCount) {
   <div class="centered">Found {{itemCount}} items</div>
 } @else {

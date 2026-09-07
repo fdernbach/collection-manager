@@ -63,17 +63,17 @@ export class Login implements OnDestroy {
     // /me call that fills in loginService.user() (firstname/lastname/etc.)
     // so the app shell's nav has data to show as soon as we navigate home.
     const getUserSubscription = this.loginService.getUser().subscribe(user => {
-      this.navigateHome();
+      this.navigateRoot();
     });
     this.subscriptions.add(getUserSubscription);
   }
 
-  private navigateHome() {
+  private navigateRoot() {
     this.invalidCredentials.set(false);
     // No route guard exists yet on '/home' — this is a straight redirect,
     // not an authorization check. Protecting the route would be a CanActivate
     // guard that checks for a stored token.
-    this.router.navigate(['home']);
+    this.router.navigate(['/']);
   }
 
   ngOnDestroy(): void {
