@@ -141,26 +141,29 @@ change), and side effects with `effect()`:
 selectedCollection = signal<Collection | null>(null);
 
 // Items of the selected collection, filtered by a case-insensitive name match against searchText
-collectionItems = computed(() => {
-  const allItems = this.selectedCollection()?.items;
-  return allItems?.filter(item =>
-    item.name.toLowerCase().includes(this.searchText().toLowerCase()));
+displayedItems = computed(() => {
+  const allItems = this.selectedCollection()?.items || [];
+  return allItems.filter(item =>
+    item.name.toLowerCase().includes(
+      (this.searchText() || '').toLocaleLowerCase()
+    )
+  );
 });
 ```
 
 ```ts
-// src/app/pages/collection-item-detail/collection-item-detail.ts
+// src/app/pages/collection-detail/collection-detail.ts
 constructor() {
-  // Re-runs whenever itemId() changes (i.e. on every /item/:id navigation), since
-  // that's the only signal read in this block.
+  // Re-runs whenever collectionId() (the route's :id) or the app-wide
+  // selectedCollection changes. Redirects a bare /collection to
+  // /collection/:id once a selected collection is known, so the URL always
+  // reflects what's actually showing.
   effect(() => {
-    let itemToDisplay = new CollectionItem();
-    this.selectedCollection = this.collectionService.getAll()[0];
-    if (this.itemId()) {
-      const itemFound = this.selectedCollection.items.find(item => item.id === this.itemId());
-      itemFound ? (itemToDisplay = itemFound) : this.router.navigate(['not-found']);
+    if (!this.collectionId() && this.collectionService.selectedCollection()) {
+      this.router.navigate([
+        'collection', this.collectionService.selectedCollection()?.id
+      ]);
     }
-    this.itemFormGroup.patchValue(itemToDisplay);
   });
 }
 ```
@@ -172,58 +175,134 @@ template compiler, no directive imports needed:
 
 ```html
 <!-- src/app/pages/collection-detail/collection-detail.html -->
-@for (item of collectionItems(); track item.name) {
+@for (item of displayedItems(); track item.name) {
   @switch (item.rarity) {
     @case ('Legendary') { <div [routerLink]="['/item', item.id]"> ... </div> }
     @case ('Rare')      { <div [routerLink]="['/item', item.id]"> ... </div> }
     @default            { <div [routerLink]="['/item', item.id]"> ... </div> }
   }
 }
-@let itemCount = collectionItems()?.length;
+@let itemCount = displayedItems()?.length;
 @if (itemCount) { <div>Found {{itemCount}} items</div> } @else { <div>No item found</div> }
 ```
 
 ### 5. Services
 
-`CollectionService` is the single source of truth for collections and items, injected with
-the `inject()` function (no constructor-parameter injection) and backed by `localStorage`
-instead of a real API. Every read returns a defensive `copy()` so callers can never mutate
-internal state by reference:
+Two services, `CollectionService` and `CollectionItemService`, wrap the backend's REST API
+(`angular-collection-management-backend/`, the same Express + SQLite server used for
+authentication — see [section 9](#9-authentication)). Both are injected with `inject()` (no
+constructor-parameter injection) and use `@Service()` rather than the older
+`@Injectable({providedIn: 'root'})` — Angular 22's newer, terser way to declare an
+auto-provided, tree-shakable service:
 
 ```ts
-// src/app/pages/collection-item-detail/collection-item-detail.ts
-private collectionService = inject(CollectionService);
+// src/app/services/collection/collection-service.ts
+@Service()
+export class CollectionService {
+  private http = inject(HttpClient);
+  // ...
+}
+```
+
+Every HTTP method follows the same shape: call the endpoint, then `map()` the raw JSON DTO into
+a real model instance via a `static fromDTO()` on the model itself (`Collection`/
+`CollectionItem`), rather than trusting the HTTP response's plain object to already have the
+model's methods (`copy()`, `toDTO()`, ...):
+
+```ts
+// src/app/services/collection/collection-service.ts
+getAll(): Observable<Collection[]> {
+  return this.http.get<ICollectionDTO[]>(this.COLLECTION_ENDPOINT, {}).pipe(
+    map(collectionListData =>
+      collectionListData.map(collectionData => Collection.fromDTO(collectionData))
+    ))
+}
+
+get(id: number): Observable<Collection> {
+  const url = `${this.COLLECTION_ENDPOINT}/${id}`;
+  return this.http.get<ICollectionDTO>(url).pipe(
+    map(collectionData => Collection.fromDTO(collectionData))
+  )
+}
 ```
 
 ```ts
-// src/app/services/collection-service.ts
-private save() {
-  localStorage.setItem('collections', JSON.stringify(this.collections));
-}
-
-getAll(): Collection[] {
-  // Return a defensive copy of every collection so callers can't mutate internal state
-  return this.collections.map(collection => collection.copy());
+// src/app/models/collection.ts
+static fromDTO(collectionData: ICollectionDTO) {
+  return Object.assign(new Collection(), {
+    ...collectionData,
+    items: collectionData.items?.map(item => CollectionItem.fromDTO(item))
+  });
 }
 ```
+
+`CollectionService` also holds one piece of shared, app-wide state: `selectedCollection`, a
+plain writable signal (not backed by the server) tracking which collection is currently active.
+`MainMenu` writes it (when the user picks a collection from the sidebar, and on startup when
+restoring the last choice from `localStorage`); `CollectionDetail` and `CollectionItemDetail`
+both read it to stay in sync with whichever collection is showing, without prop-drilling it
+through the router or re-fetching it themselves:
+
+```ts
+// src/app/services/collection/collection-service.ts
+selectedCollection = signal<Collection | null>(null);
+```
+
+`CollectionItemService` (`src/app/services/collection-item/collection-item-service.ts`) is the
+same pattern applied to individual items, plus the write operations `CollectionService` doesn't
+need: `add()`, `update()`, and `delete()`, all built on the model's `toDTO()` (the mirror image
+of `fromDTO()` — strips the class instance back down to a plain payload for the request body):
+
+```ts
+// src/app/services/collection-item/collection-item-service.ts
+add(item: CollectionItem): Observable<void> {
+  return this.http.post<void>(this.itemsEndpoint, item.toDTO());
+}
+
+update(item: CollectionItem): Observable<void> {
+  const url = `${this.itemsEndpoint}/${item.id}`
+  return this.http.put<void>(url, item.toDTO());
+}
+
+delete(item: CollectionItem): Observable<void> {
+  const url = `${this.itemsEndpoint}/${item.id}`
+  return this.http.delete<void>(url);
+}
+```
+
+`CollectionItemDetail` is the main consumer: it drives `get()` off the route's `:id` (via
+`toObservable(itemId)`, see [section 3](#3-change-detection-signals--onpush)), and calls
+`add()`/`update()`/`delete()` from `save()`/`deleteItem()` depending on whether the item being
+edited already has an id.
 
 ### 6. Routes
 
-A default redirect, nested children sharing one component for both "create" and "edit" modes,
-and a catch-all:
+A default redirect, and two parallel `children` groups that each mount the *same* component at
+both a bare path and a `:id` path — `CollectionDetail` doubles as "no collection selected yet"
+(redirects to the active one, see the `effect()` in [section 3](#3-change-detection-signals--onpush))
+and "showing collection `:id`"; `CollectionItemDetail` doubles as "create" and "edit" the same
+way. Every protected leaf route repeats `canActivate: [isLoggedInGuard]` explicitly — a parent
+route's `canActivate` does **not** cascade to its children in Angular's router:
 
 ```ts
 // src/app/app.routes.ts
 export const routes: Routes = [
-  { path: '', redirectTo: 'home', pathMatch: 'full' },
-  { path: 'home', component: CollectionDetail },
+  { path: '', redirectTo: 'collection', pathMatch: 'full' },
+  {
+    path: 'collection',
+    children: [
+      { path: '', component: CollectionDetail, canActivate: [isLoggedInGuard] },
+      { path: ':id', component: CollectionDetail, canActivate: [isLoggedInGuard] },
+    ]
+  },
   {
     path: 'item',
     children: [
-      { path: '', component: CollectionItemDetail },      // create
-      { path: ':id', component: CollectionItemDetail },   // edit
+      { path: '', component: CollectionItemDetail, canActivate: [isLoggedInGuard] },     // create
+      { path: ':id', component: CollectionItemDetail, canActivate: [isLoggedInGuard] },  // edit
     ]
   },
+  { path: 'login', component: Login },
   { path: '**', component: NotFound },
 ];
 ```
@@ -337,7 +416,7 @@ login(event: Event) {
 
 getUserInformation() {
   const getUserSubscription = this.loginService.getUser().subscribe(user => {
-    this.navigateHome();
+    this.navigateRoot();
   });
   this.subscriptions.add(getUserSubscription);
 }
@@ -405,7 +484,7 @@ inherited by child routes, so every route that needs protection lists it explici
 ```ts
 // src/app/app.routes.ts
 {
-  path: 'home',
+  path: '',
   component: CollectionDetail,
   canActivate: [isLoggedInGuard]
 },
@@ -516,21 +595,26 @@ src/app/
 ├── components/           # Reusable, presentation-only pieces
 │   ├── search-bar/
 │   ├── collection-item-card/
-│   └── confirmation-dialog/
+│   ├── confirmation-dialog/
+│   └── main-menu/        # Sidebar nav: avatar, user name, collection list, logout
 ├── pages/                # Routed views
-│   ├── collection-detail/       (the grid, "/home")
+│   ├── collection-detail/       (the grid, "/collection" and "/collection/:id")
 │   ├── collection-item-detail/  (create/edit form, "/item" and "/item/:id")
 │   ├── login/                   (Reactive Form login page, "/login")
 │   └── not-found/
-├── models/               # Plain data classes (Collection, CollectionItem, Rarity, User)
+├── models/               # Plain data classes (Collection, CollectionItem, Rarity, User),
+│                           each with fromDTO()/toDTO() to convert to/from the services' DTOs
+├── interfaces/            # DTO shapes matching the backend's JSON payloads
 ├── services/
-│   ├── collection/       # CollectionService (localStorage-backed persistence)
+│   ├── collection/       # CollectionService — collections + the app-wide selectedCollection
+│   │                       signal, against the real backend
+│   ├── collection-item/  # CollectionItemService — get/add/update/delete for individual items
 │   └── login/            # LoginService (JWT login/getUser/logout against the real backend)
 ├── guards/
 │   └── is-logged-in/     # isLoggedInGuard — CanActivateFn protecting authenticated routes
 ├── interceptors/
 │   └── auth-token/       # authTokenInterceptor — attaches the stored JWT to every request
-├── app.ts / app.html      # Root shell: user nav (avatar, collections, logout) + <router-outlet>
+├── app.ts / app.html      # Root shell: <app-main-menu> + <router-outlet>
 ├── app.routes.ts
 └── app.config.ts
 ```
