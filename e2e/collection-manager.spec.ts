@@ -2,12 +2,30 @@ import { test, expect } from '@playwright/test';
 import path from 'node:path';
 
 const sampleImage = path.join(__dirname, 'fixtures', 'sample-image.png');
+// Direct backend calls (bypassing the Angular UI) to seed known test data. The app
+// itself talks to this same server (see CollectionService/CollectionItemService's
+// baseURL) — it's just not reachable through playwright.config.ts's baseURL, which
+// points at the Angular dev server instead.
+const BACKEND_URL = 'http://localhost:3000';
+
+const seedItems = [
+  { name: 'Pièce de 1972', description: 'Pièce de 50 centimes de francs.', image: 'img/coin1.png', rarity: 'Common', price: 170 },
+  { name: 'Linx', description: 'A legendary sword of unmatched sharpness and history.', image: 'img/linx2.png', rarity: 'Legendary', price: 199 },
+  { name: 'Timbre 1800', description: 'Un vieux timbre', image: 'img/timbre1.png', rarity: 'Rare', price: 555 },
+];
 
 // End-to-end tests: unlike the integration tests under src/app/**/*.spec.ts (which run
 // components inside Angular's TestBed), these drive the real app running in a real
 // browser via `ng serve` (see playwright.config.ts's webServer), exactly as a user would.
 test.describe('Collection Manager', () => {
-  test.beforeEach(async ({ page }) => {
+  // These tests all seed/mutate the SAME admin collection in the real backend (there's
+  // no per-test database, unlike the TestBed-based integration specs). Running them in
+  // parallel workers (the config's default `fullyParallel`) would let one test's
+  // beforeEach wipe/reseed items out from under another test still reading them —
+  // serial keeps them from racing each other.
+  test.describe.configure({ mode: 'serial' });
+
+  test.beforeEach(async ({ page, request }) => {
     // '/collection' and '/item' are guarded by isLoggedInGuard, so every test needs a
     // real session first — log in against the actual backend (admin/admin1234, seeded
     // by angular-collection-management-backend/server.js) before anything else.
@@ -16,14 +34,32 @@ test.describe('Collection Manager', () => {
     await page.fill('input[formcontrolname="password"]', 'admin1234');
     await page.getByRole('button', { name: 'Login' }).click();
     // Lands on /collection, then MainMenu's loadSelectedCollection() redirects
-    // to /collection/:id once it resolves which collection to show.
-    await page.waitForURL('**/collection**');
+    // to /collection/:id once it resolves which collection to show. Wait for the
+    // id specifically (not just '**/collection**', which would also match the
+    // brief intermediate /collection with no id yet) since it's read below.
+    await page.waitForURL(/\/collection\/\d+$/);
 
-    // Start every test from a clean slate: clear whatever a previous run left in the
-    // (separate, localStorage-backed) CollectionService state, then reload so it
-    // reseeds its 3 dummy items. Only that key is removed, not the whole of
-    // localStorage, so the auth token from the login above survives the reload.
-    await page.evaluate(() => localStorage.removeItem('collections'));
+    // Start every test from a known state. Unlike the old localStorage-backed
+    // CollectionService (which reseeded 3 dummy items on its own), the real backend's
+    // admin collection just accumulates whatever earlier runs left in it — so wipe
+    // its items and recreate exactly the 3 this suite expects, via direct API calls
+    // authenticated with the token the login above just stored.
+    const token = await page.evaluate(() => localStorage.getItem('TOKEN'));
+    const authHeaders = { Authorization: `Bearer ${token}` };
+    const collectionId = page.url().match(/\/collection\/(\d+)$/)?.[1];
+
+    const collection = await (
+      await request.get(`${BACKEND_URL}/collections/${collectionId}`, { headers: authHeaders })
+    ).json();
+    for (const item of collection.items) {
+      await request.delete(`${BACKEND_URL}/items/${item.id}`, { headers: authHeaders });
+    }
+    for (const item of seedItems) {
+      await request.post(`${BACKEND_URL}/items`, { headers: authHeaders, data: { ...item, collectionId } });
+    }
+
+    // The page already fetched the (now stale) collection before the seeding above; reload
+    // so it reflects the freshly seeded items.
     await page.reload();
   });
 
