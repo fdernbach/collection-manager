@@ -51,7 +51,7 @@ describe('CollectionDetail (integration)', () => {
     harness = await RouterTestingHarness.create();
     await harness.navigateByUrl('/collection/1', CollectionDetail);
     httpMock.expectOne('http://localhost:3000/collections/1').flush(collectionDTO);
-    harness.detectChanges();
+    await harness.fixture.whenStable();
   });
 
   afterEach(() => httpMock.verify());

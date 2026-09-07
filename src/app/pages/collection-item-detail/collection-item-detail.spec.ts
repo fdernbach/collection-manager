@@ -63,7 +63,7 @@ describe('CollectionItemDetail (integration)', () => {
     httpMock.expectOne('http://localhost:3000/items/1').flush(coinDTO);
     // itemCollection$ fires right behind collectionItem$ to load the item's own collection.
     httpMock.expectOne('http://localhost:3000/collections/1').flush(collectionDTO);
-    harness.detectChanges();
+    await harness.fixture.whenStable();
 
     expect(component.itemFormGroup.value.name).toBe('Pièce de 1972');
     expect(component.itemFormGroup.value.price).toBe(170);
@@ -72,7 +72,7 @@ describe('CollectionItemDetail (integration)', () => {
   it('starts with a blank form when navigating to /item (create mode)', async () => {
     const harness = await RouterTestingHarness.create();
     const component = await harness.navigateByUrl('/item', CollectionItemDetail);
-    harness.detectChanges();
+    await harness.fixture.whenStable();
 
     expect(component.itemId()).toBeNull();
     expect(component.itemFormGroup.value.name).toBe('');
@@ -95,7 +95,7 @@ describe('CollectionItemDetail (integration)', () => {
     const component = await harness.navigateByUrl('/item/1', CollectionItemDetail);
     httpMock.expectOne('http://localhost:3000/items/1').flush(coinDTO);
     httpMock.expectOne('http://localhost:3000/collections/1').flush(collectionDTO);
-    harness.detectChanges();
+    await harness.fixture.whenStable();
 
     component.confirmDeletion();
     httpMock.expectOne({ url: 'http://localhost:3000/items/1', method: 'DELETE' }).flush(null);
