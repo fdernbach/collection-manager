@@ -64,7 +64,7 @@ export class MainMenu {
     if (!identifiedCollection) {
       identifiedCollection = this.collections()[0];
     }
-    if (identifiedCollection.id) {
+    if (identifiedCollection?.id) {
       this.collectionService.get(identifiedCollection.id).subscribe(collection => {
         this.selectedCollection.set(collection);
         if (this.router.url === '/collection') {
