@@ -14,8 +14,8 @@ test.describe('Authentication', () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
-  test('redirects an unauthenticated visit to /home back to /login', async ({ page }) => {
-    await page.goto('/home');
+  test('redirects an unauthenticated visit to /collection back to /login', async ({ page }) => {
+    await page.goto('/collection');
 
     await expect(page).toHaveURL(/\/login$/);
   });
@@ -25,7 +25,9 @@ test.describe('Authentication', () => {
     await page.fill('input[formcontrolname="username"]', 'admin');
     await page.fill('input[formcontrolname="password"]', 'admin1234');
     await page.getByRole('button', { name: 'Login' }).click();
-    await page.waitForURL('**/home');
+    // Lands on /collection, then MainMenu's loadSelectedCollection() redirects
+    // to /collection/:id once it resolves which collection to show.
+    await page.waitForURL('**/collection**');
 
     await expect(page.locator('nav .avatar')).toHaveText('S');
     await expect(page.locator('nav header')).toContainText('Super Admin');
@@ -37,7 +39,7 @@ test.describe('Authentication', () => {
 
     // Confirm the session is really gone, not just the URL at this instant —
     // a protected route should bounce back to /login again, not just this once.
-    await page.goto('/home');
+    await page.goto('/collection');
     await expect(page).toHaveURL(/\/login$/);
   });
 });

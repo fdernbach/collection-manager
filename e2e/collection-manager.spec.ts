@@ -8,14 +8,16 @@ const sampleImage = path.join(__dirname, 'fixtures', 'sample-image.png');
 // browser via `ng serve` (see playwright.config.ts's webServer), exactly as a user would.
 test.describe('Collection Manager', () => {
   test.beforeEach(async ({ page }) => {
-    // '/home' and '/item' are guarded by isLoggedInGuard, so every test needs a real
-    // session first — log in against the actual backend (admin/admin1234, seeded by
-    // angular-collection-management-backend/server.js) before anything else.
+    // '/collection' and '/item' are guarded by isLoggedInGuard, so every test needs a
+    // real session first — log in against the actual backend (admin/admin1234, seeded
+    // by angular-collection-management-backend/server.js) before anything else.
     await page.goto('/login');
     await page.fill('input[formcontrolname="username"]', 'admin');
     await page.fill('input[formcontrolname="password"]', 'admin1234');
     await page.getByRole('button', { name: 'Login' }).click();
-    await page.waitForURL('**/home');
+    // Lands on /collection, then MainMenu's loadSelectedCollection() redirects
+    // to /collection/:id once it resolves which collection to show.
+    await page.waitForURL('**/collection**');
 
     // Start every test from a clean slate: clear whatever a previous run left in the
     // (separate, localStorage-backed) CollectionService state, then reload so it
@@ -45,7 +47,7 @@ test.describe('Collection Manager', () => {
     await page.fill('#price', '99');
     await page.getByRole('button', { name: 'Save' }).click();
 
-    await expect(page).toHaveURL(/\/home$/);
+    await expect(page).toHaveURL(/\/collection\/\d+$/);
     await expect(page.getByText('Ancient Coin')).toBeVisible();
     await expect(page.getByText('Found 4 items')).toBeVisible();
   });
@@ -57,7 +59,7 @@ test.describe('Collection Manager', () => {
     await page.fill('#name', 'Something else entirely');
     await page.getByRole('button', { name: 'Cancel' }).click();
 
-    await expect(page).toHaveURL(/\/home$/);
+    await expect(page).toHaveURL(/\/collection\/\d+$/);
     await expect(page.getByText('Linx')).toBeVisible();
     await expect(page.getByText('Something else entirely')).toHaveCount(0);
   });
@@ -77,7 +79,7 @@ test.describe('Collection Manager', () => {
     await page.getByRole('button', { name: 'Delete' }).click();
     await page.getByRole('button', { name: 'Yes' }).click();
 
-    await expect(page).toHaveURL(/\/home$/);
+    await expect(page).toHaveURL(/\/collection\/\d+$/);
     await expect(page.getByText('Timbre 1800')).toHaveCount(0);
     await expect(page.getByText('Found 2 items')).toBeVisible();
   });
